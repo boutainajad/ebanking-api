@@ -2,15 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
-class AccountUser extends Pivot
+class AccountUser extends Model
 {
+    use HasFactory;
+
     protected $table = 'account_user';
 
-    protected $fillable = ['user_id', 'account_id', 'accepted_closure', 'relation_type'];
+    protected $fillable = [
+        'user_id',
+        'account_id',
+        'accepted_closure',
+        'relation_type',
+    ];
 
-    public $timestamps = true;
+    protected $casts = [
+        'accepted_closure' => 'boolean',
+    ];
 
     public function user()
     {

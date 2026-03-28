@@ -1,58 +1,67 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\CreateAccountRequest;
-use App\Http\Requests\AddCoOwnerRequest;
-use App\Services\AccountService;
+use App\Http\Controllers\Controller;
 use App\Models\Account;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
 {
-    protected $accountService;
-
-    public function __construct(AccountService $accountService)
+    public function __construct()
     {
-        $this->accountService = $accountService;
-        $this->middleware('auth:api');
+        $this->middleware(['auth:api', 'admin']);
     }
 
     public function index()
     {
-        $accounts = auth()->user()->accounts;
+        $accounts = Account::with('owners')->get();
         return response()->json($accounts);
     }
 
-    public function store(CreateAccountRequest $request)
+    public function block(Request $request, $id)
     {
-        try {
-            $account = $this->accountService->createAccount($request->validated(), auth()->user());
-            return response()->json($account, 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
-        }
-    }
+        $request->validate(['reason' => 'required|string']);
 
-    public function show($id)
-    {
-        $account = Account::with('owners')->findOrFail($id);
-        $this->authorize('view', $account);
+        $account = Account::findOrFail($id);
+
+        if ($account->status === 'CLOSED') {
+            return response()->json(['error' => 'Impossible de bloquer un compte clôturé'], 422);
+        }
+
+        $account->status = 'BLOCKED';
+        $account->block_reason = $request->reason;
+        $account->save();
+
         return response()->json($account);
     }
 
-    public function addCoOwner(AddCoOwnerRequest $request, $id)
+    public function unblock($id)
     {
         $account = Account::findOrFail($id);
-        $this->authorize('update', $account);
-        $newOwner = User::findOrFail($request->user_id);
 
-        try {
-            $account = $this->accountService->addCoOwner($account, $newOwner, auth()->user());
-            return response()->json($account);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
+        if ($account->status === 'CLOSED') {
+            return response()->json(['error' => 'Impossible de débloquer un compte clôturé'], 422);
         }
+
+        $account->status = 'ACTIVE';
+        $account->block_reason = null;
+        $account->save();
+
+        return response()->json($account);
     }
 
+    public function close($id)
+    {
+        $account = Account::findOrFail($id);
+
+        if ($account->balance != 0) {
+            return response()->json(['error' => 'Le solde doit être nul pour clôturer'], 422);
+        }
+
+        $account->status = 'CLOSED';
+        $account->save();
+
+        return response()->json($account);
+    }
 }

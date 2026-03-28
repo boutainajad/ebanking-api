@@ -30,9 +30,11 @@ class TransferController extends Controller
     {
         $transfer = Transfer::with(['fromAccount', 'toAccount', 'initiator'])->findOrFail($id);
         $user = auth()->user();
+
         if (!$transfer->fromAccount->owners->contains($user) && !$transfer->toAccount->owners->contains($user)) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
         return response()->json($transfer);
     }
 }

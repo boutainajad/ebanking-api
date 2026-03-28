@@ -2,18 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transfer extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'from_account_id', 'to_account_id', 'initiated_by',
-        'amount', 'status', 'reason'
+        'from_account_id',
+        'to_account_id',
+        'initiated_by',
+        'amount',
+        'status',
+        'reason',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'status' => 'string',
     ];
 
     public function fromAccount()
@@ -29,5 +35,20 @@ class Transfer extends Model
     public function initiator()
     {
         return $this->belongsTo(User::class, 'initiated_by');
+    }
+
+    public function isPending()
+    {
+        return $this->status === 'PENDING';
+    }
+
+    public function isCompleted()
+    {
+        return $this->status === 'COMPLETED';
+    }
+
+    public function isFailed()
+    {
+        return $this->status === 'FAILED';
     }
 }
